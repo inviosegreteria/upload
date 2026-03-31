@@ -1,0 +1,66 @@
+const FOLDER_ID = '1UyhA5xnMJowV6J_uURjBQVJ1paDWSn4S';
+
+function doPost(e) {
+  try {
+    const data = JSON.parse(e.postData.contents);
+    const folder = DriveApp.getFolderById(FOLDER_ID);
+    const timestamp = new Date().getTime();
+    const now = new Date().toLocaleString('it-IT');
+
+    const cognome = data.cognome || 'sconosciuto';
+    const nome = data.nome || 'sconosciuto';
+
+    // Salva le immagini
+    for (let i = 0; i < data.files.length; i++) {
+      const file = data.files[i];
+      const ext = file.ext || 'jpg';
+      const fileName = cognome + '_' + nome + '_' + timestamp + '_' + (i + 1) + '.' + ext;
+      const blob = Utilities.newBlob(
+        Utilities.base64Decode(file.data),
+        file.mimeType,
+        fileName
+      );
+      folder.createFile(blob);
+    }
+
+    // Crea file di testo con tutte le informazioni
+    let info = '========================================\n';
+    info += '  NUOVA RICHIESTA — ' + now + '\n';
+    info += '========================================\n\n';
+    info += '👤 DATI PERSONALI\n';
+    info += '   Nome:        ' + (data.nome || '—') + '\n';
+    info += '   Cognome:     ' + (data.cognome || '—') + '\n';
+    info += '   Email:       ' + (data.email || '—') + '\n';
+    info += '   Telefono:    ' + (data.telefono || '—') + '\n\n';
+    info += '🏷️ BRAND & SOCIAL\n';
+    info += '   Brand:       ' + (data.brand || '—') + '\n';
+    info += '   Instagram:   ' + (data.instagram || '—') + '\n\n';
+    info += '📦 PRODOTTO\n';
+    info += '   Categoria:   ' + (data.categoria || '—') + '\n\n';
+    info += '🎨 STILE RICHIESTO\n';
+    info += '   Stile:       ' + (data.stile || '—') + '\n\n';
+    info += '📝 NOTE AGGIUNTIVE\n';
+    info += '   ' + (data.note || 'Nessuna nota') + '\n\n';
+    info += '🖼️ FILE CARICATI\n';
+    info += '   ' + data.files.length + ' immagine/i\n';
+    info += '\n========================================\n';
+
+    const txtFileName = 'INFO_' + cognome + '_' + nome + '_' + timestamp + '.txt';
+    folder.createFile(txtFileName, info, MimeType.PLAIN_TEXT);
+
+    return buildResponse({ success: true });
+
+  } catch (err) {
+    return buildResponse({ success: false, error: err.message });
+  }
+}
+
+function doGet(e) {
+  return buildResponse({ status: 'Script attivo ✅' });
+}
+
+function buildResponse(data) {
+  return ContentService
+    .createTextOutput(JSON.stringify(data))
+    .setMimeType(ContentService.MimeType.JSON);
+}
